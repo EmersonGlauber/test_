@@ -136,11 +136,15 @@ const endStick=e=>{if(e.pointerId===sid){sid=null;stk.x=stk.y=0;knob.style.trans
 stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
 const bEl=document.getElementById('brake');bEl.addEventListener('pointerdown',()=>brakeHeld=true);
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>bEl.addEventListener(ev,()=>brakeHeld=false));
-document.getElementById('resetBtn').onclick=()=>{pos.set(0,0,0);yaw=0;speed=0;};
+document.getElementById('resetBtn').onclick=()=>{pos.copy(SPAWN);yaw=SPAWN_YAW;speed=0;};
 
 // Física simples do carro (espaço virtual fixo, sem GPS/ancoragem real)
-let pos=new THREE.Vector3(0,0,0),yaw=0,speed=0,steer=0;
-cam.position.set(0,1.3,2.6);
+const SPAWN=new THREE.Vector3(0,0,-3.2),SPAWN_YAW=Math.PI;
+let pos=SPAWN.clone(),yaw=SPAWN_YAW,speed=0,steer=0;
+// câmera FIXA (representa sua mão/celular) — o carro se move dentro do enquadramento
+cam.position.set(0,1.3,0);
+const lookTarget=new THREE.Vector3(pos.x,.2,pos.z);
+cam.lookAt(lookTarget);
 
 const clock=new THREE.Clock();
 function loop(){
@@ -165,11 +169,10 @@ function loop(){
     const steerAng=steer*.5;
     if(wheels.fl)wheels.fl.rotation.y=steerAng;if(wheels.fr)wheels.fr.rotation.y=steerAng;
     document.getElementById('spd').textContent=Math.round(Math.abs(speed)*3.6);
-    // câmera em 3ª pessoa atrás do carro, sobre o vídeo da câmera real
-    const behind=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)).multiplyScalar(3.4);
-    const tgt=pos.clone().add(behind);tgt.y=1.35;
-    cam.position.lerp(tgt,Math.min(1,dt*6));
-    const look=pos.clone();look.y+=.25;cam.lookAt(look);
+    // câmera fica parada (é sua mão); só acompanha suavemente a direção do carro, sem se mover
+    const desired=pos.clone();desired.y=.2;
+    lookTarget.lerp(desired,Math.min(1,dt*1.6));
+    cam.lookAt(lookTarget);
   }
   ren.render(scene,cam);
 }
